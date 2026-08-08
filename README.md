@@ -1,91 +1,58 @@
-# TITAN Marketing Agent
+# TITAN Marketing Agent — the deterministic experimentation core, isolated
 
-## Autonomous growth experimentation engine
+[![CI](https://github.com/amois3/titan_marketing_agent_case_study/actions/workflows/ci.yml/badge.svg)](https://github.com/amois3/titan_marketing_agent_case_study/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Runtime dependencies](https://img.shields.io/badge/runtime%20dependencies-0-2ea44f)
+[![License](https://img.shields.io/badge/license-review--only-6f42c1)](LICENSE)
 
-> Public case study. The original product remains private. This repository documents the architecture, operational boundaries, and verification model without publishing implementation code, credentials, channel accounts, or proprietary data.
+TITAN Marketing Agent is an autonomous growth-experimentation product: a hypothesis becomes an experiment, measured outcomes become a deterministic reward, and the result informs the next decision. The private product contains channel integrations, persistence, content workflows, and operational controls. This public repository is a runnable reference core that isolates the decision boundary rather than exposing that private system.
 
-TITAN Marketing Agent is not a content generator with a scheduler attached. It is a controlled experimentation loop:
+The important premise is deliberately modest: language models may help formulate work, but they do not grade their own commercial success. Rewards come from attributable events; retries do not double-count them; and a policy decides whether an action may leave the system.
 
-hypothesis -> experiment -> measured outcome -> deterministic reward -> durable insight -> better next experiment
+```bash
+python -m venv .venv && . .venv/bin/activate  # .venv\\Scripts\\activate on Windows
+pip install -r requirements-dev.txt
+python -m pytest -q                            # 8 tests, no account, network or API key
+python -m agent.cli report --min-conversions-per-arm 1
+```
 
-The system is designed for the part that makes autonomous marketing difficult in practice: selecting what to test, measuring what happened, learning without inventing metrics, protecting a product voice, and keeping external actions under explicit control.
+## What is here
 
-## What it does
+| Component | Responsibility | Test focus |
+| --- | --- | --- |
+| `agent/` | Event aggregation, deterministic rewards, Thompson sampling, reporting and autonomy policy | duplicate delivery, filtering, repeatability, approval gates |
+| `tests/` | Executable product invariants | failures that would otherwise distort decisions quietly |
+| `docs/` | Architecture, decisions and autonomy boundary | why the boundary exists |
 
-- Generates structured growth hypotheses and candidate content.
-- Selects channel/category arms with Thompson sampling rather than a fixed posting calendar.
-- Tracks clicks, conversions, and platform engagement.
-- Computes rewards deterministically from measured events - never from a language model's interpretation.
-- Stores insights and experiment evidence for the next planning cycle.
-- Supports explicit autonomy modes per channel: full automation, approval-required, or suggest-only.
-- Keeps the orchestration restart-safe with durable state transitions.
+## The failures this core refuses to hide
 
-## The operating model
+**An event can be delivered twice.** A network retry must not turn one conversion into two. `aggregate()` deduplicates by event ID before it mutates an arm.
 
-### 1. Hypotheses are testable objects
+**A reporting threshold can silently change the picture.** `ga report --min-conversions-per-arm` defaults to `0`, filters only when explicitly asked, and always reports how many arms were removed by the threshold.
 
-A candidate starts as a falsifiable proposition: audience, channel, message angle, expected signal, and a defined observation window. The system does not treat a post as success merely because it exists.
+**An agent can be given more autonomy than the channel deserves.** `full`, `approval`, and `suggest_only` are product policy, not a prompt. An approval-mode action cannot publish without an approval signal; suggest-only never publishes.
 
-### 2. Planning is exploration with accountability
+## How the decision loop works
 
-A Thompson-sampling planner selects among experiment arms using observed outcomes and uncertainty. This balances exploitation of proven directions with exploration of under-sampled ones.
+1. Capture attributable impressions, clicks and conversions as events.
+2. Deduplicate events, calculate transparent statistics, and derive a deterministic reward.
+3. Use a Beta posterior to sample a candidate arm. The caller owns the random seed, so a decision can be reproduced during investigation.
+4. Report the evidence and pass the action through the autonomy policy before any external side effect.
 
-### 3. Attribution produces the reward
+The production system adds durable database transactions and idempotency records around this boundary. This compact core makes the contract readable without publishing credentials, private prompts, channel accounts, content, or the original product source.
 
-Reward inputs come from tracked clicks, conversion events, and supported platform signals. The reward function is deterministic and inspectable, which prevents a model from declaring an experiment successful because the copy sounds persuasive.
+## System context
 
-The reporting CLI supports a minimum-conversion threshold for arms. It explicitly reports how many arms were filtered rather than quietly changing the comparison set.
+The larger private product supports hypothesis-led experiments, Thompson-sampling allocation, deterministic rewards, attribution reporting, an approval matrix, structured tool boundaries, and restart-safe execution. Its documented `ga report` delivery includes `--min-conversions-per-arm`, tests for the CLI option and filtering helper, and an explicit count of filtered arms.
 
-### 4. Voice is a quality boundary
+## Documentation
 
-Voice is not delegated to a single prompt. The system works from approved examples, generates multiple candidates where useful, runs a critic pass, applies deterministic banned-phrase checks, and carries learned taste notes forward. Content can still be held for review before publication.
+- [Architecture](docs/ARCHITECTURE.md)
+- [Design decisions](docs/DECISIONS.md)
+- [Trust and safety](docs/TRUST_AND_SAFETY.md)
+- [Agent design](docs/AGENT_DESIGN.md)
 
-### 5. External actions remain governed
+## Scope and license
 
-Each channel can be configured independently:
+This is a public technical case study and reference core, not a distribution of the private TITAN Marketing Agent product. It is published for review and discussion only; see [LICENSE](LICENSE).
 
-| Mode | Behaviour |
-|---|---|
-| Full automation | The system may publish within its configured policy. |
-| Approval required | It produces a ready candidate and waits for a human decision. |
-| Suggest only | It produces recommendations but never publishes. |
-
-A capability being implemented is not treated as live automation. In the current product configuration, X is the live automated channel; other channel integrations remain intentionally disabled until explicitly enabled.
-
-## Reliability and safety decisions
-
-- Database-backed experiment state prevents a restart from losing the lifecycle of an active test.
-- Transactions and idempotent transitions protect state from partial completion.
-- Pydantic schemas constrain structured tool inputs and outputs.
-- Metrics are calculated from events, not free-form model prose.
-- Publishing authority is separate from generation capability.
-- Approval state is explicit and auditable.
-- The system reports missing or insufficient data instead of fabricating a conclusion.
-
-## Verification
-
-The private source includes CLI and helper tests for reporting, planning, rewards, and state handling. A recent delivery added:
-
-- `ga report --min-conversions-per-arm`, defaulting to `0`;
-- explicit reporting of arms filtered by that threshold;
-- tests for the CLI option and filtering helper;
-- README documentation;
-- published laptop commit `4e6e934`.
-
-This case study intentionally does not publish source code. The evidence to evaluate is the system design, its deterministic boundaries, its documented operating model, and the reproducible claims above.
-
-## Why this architecture matters
-
-Marketing automation gets risky when it behaves confidently but cannot say what it measured, why it selected an action, or whether a person approved it. TITAN Marketing Agent makes those questions first-class product constraints.
-
-The goal is not more output. It is a marketing system that can test, learn, and operate without becoming unaccountable.
-
-## Scope and disclosure
-
-- This is an independent product in the TITAN family, not a component of TITAN Agent or TITAN Code.
-- The public repository is documentation only; the original source remains private.
-- No client data, channel credentials, private prompts, or implementation code are included.
-
----
-
-Built by [Aleksejs Moisejevs](https://github.com/amois3) · AI Systems Architect & Agentic Product Builder
