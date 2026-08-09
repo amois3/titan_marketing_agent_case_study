@@ -15,3 +15,7 @@ A conversion threshold can be useful for decision quality, but it changes the re
 ## Preserve an investigation path
 
 Thompson sampling is stochastic. The random generator is injected rather than hidden so a decision can be reproduced with the recorded seed and inputs.
+
+## Centralize lifecycle transitions
+
+Approving, rejecting, marking posted, and retrying an experiment are not interface concerns. They are business rules about what state is valid, what side effects must happen, and what must be recorded. Writing them once and calling them from every interface (CLI, dashboard, and any future entry point) keeps the behavior consistent and makes the rules directly testable without a CLI runner or HTTP client.

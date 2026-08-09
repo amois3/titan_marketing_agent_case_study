@@ -5,7 +5,7 @@
 ![Runtime dependencies](https://img.shields.io/badge/runtime%20dependencies-0-2ea44f)
 [![License](https://img.shields.io/badge/license-review--only-6f42c1)](LICENSE)
 
-TITAN Marketing Agent is an autonomous growth-experimentation product: a hypothesis becomes an experiment, measured outcomes become a deterministic reward, and the result informs the next decision. The private product contains channel integrations, persistence, content workflows, and operational controls. This public repository is a runnable reference core that isolates the decision boundary rather than exposing that private system.
+TITAN Marketing Agent is an autonomous growth-experimentation product: a hypothesis becomes an experiment, measured outcomes become a deterministic reward, and the result informs the next decision. The private product contains channel integrations, persistence, content workflows, a web dashboard, and operational controls. This public repository is a runnable reference core that isolates the decision boundary rather than exposing that private system.
 
 The important premise is deliberately modest: language models may help formulate work, but they do not grade their own commercial success. Rewards come from attributable events; retries do not double-count them; and a policy decides whether an action may leave the system.
 
@@ -32,6 +32,8 @@ python -m agent.cli report --min-conversions-per-arm 1
 
 **An agent can be given more autonomy than the channel deserves.** `full`, `approval`, and `suggest_only` are product policy, not a prompt. An approval-mode action cannot publish without an approval signal; suggest-only never publishes.
 
+**The same lifecycle rule must not be written twice.** In the full product, experiment state transitions — approve, reject, mark-posted, retry — live in one module and are invoked by both the CLI and the web dashboard. Duplicating the rule would mean fixing the same bug in multiple places, as happened with the original dashboard implementation. This core keeps the boundary explicit so the invariant is easy to see.
+
 ## How the decision loop works
 
 1. Capture attributable impressions, clicks and conversions as events.
@@ -43,7 +45,7 @@ The production system adds durable database transactions and idempotency records
 
 ## System context
 
-The larger private product supports hypothesis-led experiments, Thompson-sampling allocation, deterministic rewards, attribution reporting, an approval matrix, structured tool boundaries, and restart-safe execution. Its documented `ga report` delivery includes `--min-conversions-per-arm`, tests for the CLI option and filtering helper, and an explicit count of filtered arms.
+The larger private product supports hypothesis-led experiments, Thompson-sampling allocation, deterministic rewards, attribution reporting, an approval matrix, structured tool boundaries, restart-safe execution, a centralized state machine for experiment lifecycle transitions, and a web dashboard that shares that state machine with the CLI. Its documented `ga report` delivery includes `--min-conversions-per-arm`, tests for the CLI option and filtering helper, and an explicit count of filtered arms.
 
 ## Documentation
 
@@ -55,4 +57,3 @@ The larger private product supports hypothesis-led experiments, Thompson-samplin
 ## Scope and license
 
 This is a public technical case study and reference core, not a distribution of the private TITAN Marketing Agent product. It is published for review and discussion only; see [LICENSE](LICENSE).
-

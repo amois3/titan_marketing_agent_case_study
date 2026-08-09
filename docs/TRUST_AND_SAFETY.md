@@ -8,7 +8,7 @@ The automation boundary is intentionally narrower than the reasoning boundary. A
 
 ## What production adds
 
-The private product also has connected-account credentials, channel-specific configuration, durable transaction state, idempotency records, review flows and operational monitoring. Those components are not reproduced here and this repository cannot grant external authority.
+The private product also has connected-account credentials, channel-specific configuration, durable transaction state, idempotency records, review flows, operational monitoring, and a centralized lifecycle state machine. Those components are not reproduced here and this repository cannot grant external authority.
 
 ## Investigating an incident
 
